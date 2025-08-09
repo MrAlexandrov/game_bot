@@ -40,9 +40,18 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# 4. Создаем __init__.py файлы, чтобы сделать директории Python-пакетами
+# 4. Исправляем импорты в сгенерированных файлах, делая их относительными
+# Это необходимо, потому что protoc генерирует абсолютные импорты
+echo "Fixing imports in generated files..."
+find "${PROTO_GEN_DIR}" -name "*_pb2.py" -exec sed -i -E 's/^import (models|handlers)\.(.*_pb2)/from . import \2/g' {} \;
+find "${PROTO_GEN_DIR}" -name "*_pb2_grpc.py" -exec sed -i -E 's/^import (models|handlers)\.(.*_pb2)/from . import \2/g' {} \;
+
+# 5. Создаем __init__.py файлы, чтобы сделать директории Python-пакетами
 echo "Creating __init__.py files..."
-find "${PROTO_GEN_DIR}" -type d -exec touch {}/__init__.py \;
+# Создаем __init__.py во всех директориях, включая корневую
+touch "${PROTO_GEN_DIR}/__init__.py"
+find "${PROTO_GEN_DIR}" -mindepth 1 -type d -exec touch {}/__init__.py \;
+
 
 echo ""
 echo "Proto generation successful!"

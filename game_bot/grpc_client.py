@@ -7,9 +7,6 @@ import logging
 import sys
 import os
 
-# Add the current directory to the path so we can import proto modules
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from typing import List, Optional
 
 from game_bot.config import BACKEND_GRPC_ADDRESS
@@ -24,8 +21,8 @@ class GameServiceClient:
         # Import the generated proto classes inside the constructor
         # to avoid import errors if proto files haven't been generated yet
         try:
-            from proto.handlers import cruds_pb2, cruds_pb2_grpc
-            from proto.models import models_pb2, game_pb2
+            from game_bot.proto.handlers import cruds_pb2, cruds_pb2_grpc
+            from game_bot.proto.models import models_pb2, game_pb2
             self.cruds_pb2 = cruds_pb2
             self.cruds_pb2_grpc = cruds_pb2_grpc
             self.models_pb2 = models_pb2
