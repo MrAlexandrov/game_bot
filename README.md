@@ -12,7 +12,7 @@ A Telegram bot for conducting quiz games using the game_userver backend service.
 
 ## Prerequisites
 
-- Python 3.7 or higher
+- Python 3.7 or higher (the bot uses async/await syntax which requires Python 3.7+)
 - A Telegram bot token (from BotFather)
 - Access to the game_userver backend service
 
@@ -22,11 +22,19 @@ A Telegram bot for conducting quiz games using the game_userver backend service.
 
 2. Install the required dependencies:
    ```bash
-   pip install -r requirements.txt
+   # Make sure you're using Python 3
+   python3 --version
+   
+   # Install the required dependencies
+   pip3 install -r requirements.txt
    ```
 
 3. Generate the gRPC client code from proto files:
    ```bash
+   # Install gRPC tools
+   pip3 install grpcio-tools==1.50.0
+   
+   # Run the generation script
    chmod +x generate_proto.sh
    ./generate_proto.sh
    ```
@@ -40,7 +48,7 @@ A Telegram bot for conducting quiz games using the game_userver backend service.
 ## Running the Bot
 
 ```bash
-python main.py
+python3 main.py
 ```
 
 ## Usage
@@ -98,9 +106,22 @@ game_bot/
 
 ### Common Issues
 
-1. **"Module not found" errors**: Make sure you've run the proto generation script
-2. **Connection errors**: Verify the backend service is running and accessible
-3. **Authentication errors**: Check your Telegram bot token
+1. **Python version issues**: Make sure you're using Python 3.7 or higher
+2. **Proto generation fails**: Make sure you have `grpcio-tools` installed before running the script
+3. **Import errors**: If you still get import errors after generating the proto code, try running:
+   ```bash
+   export PYTHONPATH=/path/to/game_bot:$PYTHONPATH
+   ```
+4. **Connection errors**: Verify the backend service is running and accessible
+5. **Authentication errors**: Check your Telegram bot token
+
+### Generated Files
+
+After running the proto generation script, you should have these files:
+- `proto/handlers/cruds_pb2.py`
+- `proto/handlers/cruds_pb2_grpc.py`
+- `proto/models/models_pb2.py`
+- `proto/models/game_pb2.py`
 
 ### Logs
 

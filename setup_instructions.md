@@ -2,14 +2,24 @@
 
 Since you'll be setting up and running this bot on a different machine, here are the steps you need to follow:
 
+## Prerequisites
+
+- Python 3.7 or higher (the bot uses async/await syntax which requires Python 3.7+)
+- A Telegram bot token (from BotFather)
+- Access to the game_userver backend service
+
 ## 1. Install Dependencies
 
 ```bash
-pip install -r requirements.txt
+# Make sure you're using Python 3
+python3 --version
+
+# Install the required dependencies
+pip3 install -r requirements.txt
 ```
 
 This will install:
-- python-telegram-bot==13.15
+- python-telegram-bot==13.15 (requires Python 3.7+)
 - grpcio==1.50.0
 - protobuf==3.20.3
 
@@ -17,7 +27,7 @@ This will install:
 
 Install the gRPC tools:
 ```bash
-pip install grpcio-tools==1.50.0
+pip3 install grpcio-tools==1.50.0
 ```
 
 Then run the generation script:
@@ -42,17 +52,46 @@ export BACKEND_GRPC_ADDRESS="address_of_your_backend_service:port"
 ## 4. Run the Bot
 
 ```bash
-python main.py
+python3 main.py
 ```
 
 ## Troubleshooting
 
-If you encounter import errors after generating the gRPC code, you may need to manually fix some import paths in the generated files in the `proto/handlers/` and `proto/models/` directories.
+### Common Issues
 
-The generated files should be:
+1. **Python version issues**: Make sure you're using Python 3.7 or higher
+2. **Proto generation fails**: Make sure you have `grpcio-tools` installed before running the script
+3. **Import errors**: If you still get import errors after generating the proto code, try running:
+   ```bash
+   export PYTHONPATH=/path/to/game_bot:$PYTHONPATH
+   ```
+4. **Connection errors**: Verify the backend service is running and accessible
+5. **Authentication errors**: Check your Telegram bot token
+
+### Generated Files
+
+After running the proto generation script, you should have these files:
 - `proto/handlers/cruds_pb2.py`
 - `proto/handlers/cruds_pb2_grpc.py`
 - `proto/models/models_pb2.py`
 - `proto/models/game_pb2.py`
 
-Make sure the import statements in these files correctly reference the package structure.
+### Logs
+
+The bot logs information and errors to the console. For more detailed logging, you can modify the logging level in `bot.py` and `grpc_client.py`.
+
+## Development
+
+### Adding New Features
+
+1. Modify the proto files if you need to change the API
+2. Regenerate the gRPC code with `./generate_proto.sh`
+3. Update the `grpc_client.py` with new methods if needed
+4. Add new command handlers in `bot.py`
+
+### Code Structure
+
+- `config.py` - Contains all configuration variables
+- `grpc_client.py` - Handles all communication with the backend service
+- `game_state.py` - Manages in-memory game state
+- `bot.py` - Contains all Telegram bot logic and command handlers

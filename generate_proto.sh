@@ -9,7 +9,21 @@ python -m grpc_tools.protoc -I./proto \
   ./proto/handlers/cruds.proto \
   ./proto/handlers/hello.proto
 
-# Fix import paths in generated files
-sed -i 's/import models/import game_bot.proto.models/g' proto/handlers/cruds_pb2.py
-sed -i 's/from models/from game_bot.proto.models/g' proto/handlers/cruds_pb2_grpc.py
-sed -i 's/import handlers/import game_bot.proto.handlers/g' proto/handlers/cruds_pb2_grpc.py
+# Check if generation was successful
+if [ $? -eq 0 ]; then
+    echo "Proto generation successful!"
+    
+    # Fix import paths in generated files if they exist
+    if [ -f proto/handlers/cruds_pb2.py ]; then
+        sed -i 's/import models_pb2/from . import models_pb2/g' proto/handlers/cruds_pb2.py
+    fi
+    
+    if [ -f proto/handlers/cruds_pb2_grpc.py ]; then
+        sed -i 's/from models_pb2/from . import models_pb2/g' proto/handlers/cruds_pb2_grpc.py
+        sed -i 's/import cruds_pb2/from . import cruds_pb2/g' proto/handlers/cruds_pb2_grpc.py
+    fi
+    
+    echo "Import paths fixed!"
+else
+    echo "Proto generation failed!"
+fi

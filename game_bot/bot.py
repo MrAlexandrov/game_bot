@@ -3,20 +3,41 @@ Main Telegram bot implementation for the quiz game
 """
 
 import logging
+import sys
+import os
+
+# Add the current directory to the path so we can import proto modules
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from typing import Dict, List, Optional
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 from game_bot.config import TELEGRAM_BOT_TOKEN, POINTS_PER_CORRECT_ANSWER
-from game_bot.grpc_client import GameServiceClient
+
+# Import the gRPC client
+try:
+    from game_bot.grpc_client import GameServiceClient
+    # We'll initialize the gRPC client when needed
+    grpc_client = None
+except ImportError as e:
+    print("Failed to import grpc_client: {}".format(e))
+    print("Make sure you've run the proto generation script: ./generate_proto.sh")
+    sys.exit(1)
+
 from game_bot.game_state import game_state_manager, GameSessionState, PlayerState
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global gRPC client
-grpc_client = GameServiceClient()
+
+def get_grpc_client():
+    """Get or create the gRPC client instance"""
+    global grpc_client
+    if grpc_client is None:
+        grpc_client = GameServiceClient()
+    return grpc_client
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -39,7 +60,8 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def packs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /packs command to list available quiz packs"""
     try:
-        packs = grpc_client.get_all_packs()
+        client = get_grpc_client()
+        packs = client.get_all_packs()
         
         if not packs:
             await update.message.reply_text("No quiz packs available at the moment.")
@@ -47,21 +69,22 @@ async def packs_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         message = "📚 Available Quiz Packs:\n\n"
         for i, pack in enumerate(packs, 1):
-            message += f"{i}. {pack.title}\n"
+            message += "{}. {}\n".format(i, pack.title)
         
         message += "\nUse /newgame to start a new game with one of these packs!"
         
         await update.message.reply_text(message)
     except Exception as e:
-        logger.error(f"Error fetching packs: {e}")
+        logger.error("Error fetching packs: {}".format(e))
         await update.message.reply_text("Sorry, I couldn't fetch the quiz packs at the moment. Please try again later.")
 
 
 async def newgame_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /newgame command to start a new game"""
     try:
+        client = get_grpc_client()
         # Get available packs
-        packs = grpc_client.get_all_packs()
+        packs = client.get_all_packs()
         
         if not packs:
             await update.message.reply_text("No quiz packs available. Please ask an admin to add some packs.")
@@ -78,13 +101,13 @@ async def newgame_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         message = "🎮 Choose a quiz pack to start a new game:\n\n"
         for i, pack in enumerate(packs, 1):
-            message += f"{i}. {pack.title}\n"
+            message += "{}. {}\n".format(i, pack.title)
         
         await update.message.reply_text(message, reply_markup=reply_markup)
         context.user_data["awaiting_pack_selection"] = True
         
     except Exception as e:
-        logger.error(f"Error starting new game: {e}")
+        logger.error("Error starting new game: {}".format(e))
         await update.message.reply_text(
             "Sorry, I couldn't start a new game at the moment. Please try again later.",
             reply_markup=ReplyKeyboardRemove()
@@ -134,8 +157,9 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session_to_join = waiting_sessions[0]
     
     # Add player to the session
-    player_name = user.first_name or user.username or f"Player_{user.id}"
-    player = grpc_client.add_player(session_to_join.game_session_id, player_name)
+    player_name = user.first_name or user.username or "Player_{}".format(user.id)
+    client = get_grpc_client()
+    player = client.add_player(session_to_join.game_session_id, player_name)
     
     if not player:
         await update.message.reply_text(
@@ -150,13 +174,13 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     # Get all players in the session
-    players = grpc_client.get_players(session_to_join.game_session_id)
+    players = client.get_players(session_to_join.game_session_id)
     
     # Notify all players in the session
-    message = f"🎉 {player_name} has joined the game!\n\n"
+    message = "🎉 {} has joined the game!\n\n".format(player_name)
     message += "Players in this game:\n"
     for p in players:
-        message += f"• {p.name}\n"
+        message += "• {}\n".format(p.name)
     
     message += "\nWait for the game creator to start the game with the 'Start Game' button."
     
@@ -228,7 +252,8 @@ async def handle_pack_selection(update: Update, context: ContextTypes.DEFAULT_TY
         return
     
     # Create a new game session
-    game_session = grpc_client.create_game_session(selected_pack.id)
+    client = get_grpc_client()
+    game_session = client.create_game_session(selected_pack.id)
     
     if not game_session:
         await update.message.reply_text(
@@ -243,8 +268,8 @@ async def handle_pack_selection(update: Update, context: ContextTypes.DEFAULT_TY
     )
     
     # Add the creator as the first player
-    player_name = user.first_name or user.username or f"Player_{user.id}"
-    player = grpc_client.add_player(game_session.id, player_name)
+    player_name = user.first_name or user.username or "Player_{}".format(user.id)
+    player = client.add_player(game_session.id, player_name)
     
     if not player:
         await update.message.reply_text(
@@ -261,12 +286,12 @@ async def handle_pack_selection(update: Update, context: ContextTypes.DEFAULT_TY
     )
     
     # Get questions for this pack
-    questions = grpc_client.get_questions_by_pack_id(selected_pack.id)
+    questions = client.get_questions_by_pack_id(selected_pack.id)
     
     if not questions:
         await update.message.reply_text(
-            f"The selected pack '{selected_pack.title}' has no questions. "
-            "Please choose a different pack.",
+            "The selected pack '{}' has no questions. "
+            "Please choose a different pack.".format(selected_pack.title),
             reply_markup=ReplyKeyboardRemove()
         )
         # Clean up
@@ -280,10 +305,10 @@ async def handle_pack_selection(update: Update, context: ContextTypes.DEFAULT_TY
     keyboard = [["Start Game"], ["Cancel Game"]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     
-    message = f"🎮 New Game Created!\n\n"
-    message += f"Pack: {selected_pack.title}\n"
-    message += f"Questions: {len(questions)}\n\n"
-    message += f"Players:\n• {player_name} (creator)\n\n"
+    message = "🎮 New Game Created!\n\n"
+    message += "Pack: {}\n".format(selected_pack.title)
+    message += "Questions: {}\n\n".format(len(questions))
+    message += "Players:\n• {} (creator)\n\n".format(player_name)
     message += "Waiting for more players to join...\n"
     message += "Other players can join with /join\n\n"
     message += "When ready, press 'Start Game' to begin!"
@@ -312,7 +337,8 @@ async def handle_waiting_room_action(update: Update, context: ContextTypes.DEFAU
             return
         
         # Start the game
-        game_session = grpc_client.start_game_session(session_state.game_session_id)
+        client = get_grpc_client()
+        game_session = client.start_game_session(session_state.game_session_id)
         
         if not game_session:
             await update.message.reply_text(
@@ -366,7 +392,8 @@ async def present_question(update: Update, context: ContextTypes.DEFAULT_TYPE, g
         return
     
     # Get variants for this question
-    variants = grpc_client.get_variants_by_question_id(question.id)
+    client = get_grpc_client()
+    variants = client.get_variants_by_question_id(question.id)
     
     if not variants:
         # Skip this question if no variants
@@ -382,11 +409,11 @@ async def present_question(update: Update, context: ContextTypes.DEFAULT_TYPE, g
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
     
     # Format question message
-    message = f"❓ Question {session_state.current_question_index + 1}/{len(session_state.questions)}:\n\n"
-    message += f"{question.text}\n\n"
+    message = "❓ Question {}/{}:\n\n".format(session_state.current_question_index + 1, len(session_state.questions))
+    message += "{}\n\n".format(question.text)
     
     if question.image_url:
-        message += f"Image: {question.image_url}\n\n"
+        message += "Image: {}\n\n".format(question.image_url)
     
     message += "Choose your answer:"
     
@@ -456,7 +483,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     # Submit answer to backend
-    response = grpc_client.submit_answer(
+    client = get_grpc_client()
+    response = client.submit_answer(
         player_state.player_id, question_id, selected_variant.id
     )
     
@@ -475,7 +503,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Send feedback
     if response.is_correct:
-        feedback = f"✅ Correct! You earned {response.points} points."
+        feedback = "✅ Correct! You earned {} points.".format(response.points)
     else:
         feedback = "❌ Incorrect. Better luck next time!"
     
@@ -498,7 +526,8 @@ async def end_game(update: Update, context: ContextTypes.DEFAULT_TYPE, game_sess
         return
     
     # End game session in backend
-    grpc_client.end_game_session(game_session_id)
+    client = get_grpc_client()
+    client.end_game_session(game_session_id)
     
     # Update game state
     game_state_manager.end_session(game_session_id)
@@ -519,7 +548,7 @@ async def end_game(update: Update, context: ContextTypes.DEFAULT_TYPE, game_sess
         elif i == 3:
             medal = "🥉"
         
-        message += f"{medal} {result['player_name']}: {result['score']} points\n"
+        message += "{} {}:{} points\n".format(medal, result['player_name'], result['score'])
     
     message += "\nThanks for playing! Start a new game with /newgame"
     
