@@ -7,6 +7,15 @@ import logging
 import sys
 import os
 
+# Это ключ к работе сгенерированных proto-файлов без их модификации.
+# Мы добавляем корневую директорию сгенерированных пакетов (`game_bot/proto`)
+# в пути поиска Python. Это позволяет импортам вида `import models.models_pb2`
+# внутри сгенерированных файлов работать корректно.
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_PROTO_DIR = os.path.join(_CURRENT_DIR, 'proto')
+if _PROTO_DIR not in sys.path:
+    sys.path.append(_PROTO_DIR)
+
 from typing import List, Optional
 
 from game_bot.config import BACKEND_GRPC_ADDRESS
