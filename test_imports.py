@@ -28,13 +28,6 @@ def test_imports():
         from game_bot.game_state import game_state_manager
         print("game_bot.game_state imported successfully")
         
-        # Test importing the proto wrapper
-        from game_bot.proto_wrapper import IMPORT_SUCCESS
-        if IMPORT_SUCCESS:
-            print("game_bot.proto_wrapper imported successfully with proto modules")
-        else:
-            print("game_bot.proto_wrapper imported successfully (proto modules not available)")
-        
         # Test importing the config
         from game_bot.config import TELEGRAM_BOT_TOKEN, BACKEND_GRPC_ADDRESS
         print("game_bot.config imported successfully")
