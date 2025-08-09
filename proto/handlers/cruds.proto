@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package handlers.api;
+
+import "models/models.proto";
+import "models/game.proto";
+
+// Запросы и ответы для Pack
+message CreatePackRequest {
+  string title = 1;
+}
+
+message CreatePackResponse {
+  NModels.Proto.Pack pack = 1;
+}
+
+message GetPackByIdRequest {
+  string id = 1;
+}
+
+message GetPackByIdResponse {
+  NModels.Proto.Pack pack = 1;
+}
+
+message GetAllPacksRequest {
+}
+
+message GetAllPacksResponse {
+  repeated NModels.Proto.Pack packs = 1;
+}
+
+// Запросы и ответы для Question
+message CreateQuestionRequest {
+  string pack_id = 1;
+  string text = 2;
+  string image_url = 3;
+}
+
+message CreateQuestionResponse {
+  NModels.Proto.Question question = 1;
+}
+
+message GetQuestionByIdRequest {
+  string id = 1;
+}
+
+message GetQuestionByIdResponse {
+  NModels.Proto.Question question = 1;
+}
+
+message GetQuestionsByPackIdRequest {
+  string pack_id = 1;
+}
+
+message GetQuestionsByPackIdResponse {
+  repeated NModels.Proto.Question questions = 1;
+}
+
+// Запросы и ответы для Variant
+message CreateVariantRequest {
+  string question_id = 1;
+  string text = 2;
+  bool is_correct = 3;
+}
+
+message CreateVariantResponse {
+  NModels.Proto.Variant variant = 1;
+}
+
+message GetVariantByIdRequest {
+  string id = 1;
+}
+
+message GetVariantByIdResponse {
+  NModels.Proto.Variant variant = 1;
+}
+
+message GetVariantsByQuestionIdRequest {
+  string question_id = 1;
+}
+
+message GetVariantsByQuestionIdResponse {
+  repeated NModels.Proto.Variant variants = 1;
+}
+
+// Запросы и ответы для GameSession
+message CreateGameSessionRequest {
+  string pack_id = 1;
+}
+
+message CreateGameSessionResponse {
+  NModels.Proto.GameSession game_session = 1;
+}
+
+message GetGameSessionRequest {
+  string id = 1;
+}
+
+message GetGameSessionResponse {
+  NModels.Proto.GameSession game_session = 1;
+}
+
+message StartGameSessionRequest {
+  string id = 1;
+}
+
+message StartGameSessionResponse {
+  NModels.Proto.GameSession game_session = 1;
+}
+
+message EndGameSessionRequest {
+  string id = 1;
+}
+
+message EndGameSessionResponse {
+  NModels.Proto.GameSession game_session = 1;
+}
+
+message GetGameSessionsRequest {
+}
+
+message GetGameSessionsResponse {
+  repeated NModels.Proto.GameSession game_sessions = 1;
+}
+
+// Запросы и ответы для Player
+message AddPlayerRequest {
+  string game_session_id = 1;
+  string name = 2;
+}
+
+message AddPlayerResponse {
+  NModels.Proto.Player player = 1;
+}
+
+message GetPlayersRequest {
+  string game_session_id = 1;
+}
+
+message GetPlayersResponse {
+  repeated NModels.Proto.Player players = 1;
+}
+
+// Запросы и ответы для PlayerAnswer
+message SubmitAnswerRequest {
+  string player_id = 1;
+  string question_id = 2;
+  string variant_id = 3;
+}
+
+message SubmitAnswerResponse {
+  bool is_correct = 1;
+  int32 points = 2;
+}
+
+message GetPlayerAnswersRequest {
+  string player_id = 1;
+}
+
+message GetPlayerAnswersResponse {
+  repeated NModels.Proto.PlayerAnswer answers = 1;
+}
+
+// gRPC сервис
+service QuizService {
+  // Pack operations
+  rpc CreatePack(CreatePackRequest) returns (CreatePackResponse) {};
+  rpc GetPackById(GetPackByIdRequest) returns (GetPackByIdResponse) {};
+  rpc GetAllPacks(GetAllPacksRequest) returns (GetAllPacksResponse) {};
+
+  // Question operations
+  rpc CreateQuestion(CreateQuestionRequest) returns (CreateQuestionResponse);
+  rpc GetQuestionById(GetQuestionByIdRequest) returns (GetQuestionByIdResponse);
+  rpc GetQuestionsByPackId(GetQuestionsByPackIdRequest)
+      returns (GetQuestionsByPackIdResponse);
+
+  // Variant operations
+  rpc CreateVariant(CreateVariantRequest) returns (CreateVariantResponse);
+  rpc GetVariantById(GetVariantByIdRequest) returns (GetVariantByIdResponse);
+  rpc GetVariantsByQuestionId(GetVariantsByQuestionIdRequest)
+      returns (GetVariantsByQuestionIdResponse);
+
+  // GameSession operations
+  rpc CreateGameSession(CreateGameSessionRequest) returns (CreateGameSessionResponse);
+  rpc GetGameSession(GetGameSessionRequest) returns (GetGameSessionResponse);
+  rpc StartGameSession(StartGameSessionRequest) returns (StartGameSessionResponse);
+  rpc EndGameSession(EndGameSessionRequest) returns (EndGameSessionResponse);
+  rpc GetGameSessions(GetGameSessionsRequest) returns (GetGameSessionsResponse);
+
+  // Player operations
+  rpc AddPlayer(AddPlayerRequest) returns (AddPlayerResponse);
+  rpc GetPlayers(GetPlayersRequest) returns (GetPlayersResponse);
+
+  // PlayerAnswer operations
+  rpc SubmitAnswer(SubmitAnswerRequest) returns (SubmitAnswerResponse);
+  rpc GetPlayerAnswers(GetPlayerAnswersRequest) returns (GetPlayerAnswersResponse);
+}
