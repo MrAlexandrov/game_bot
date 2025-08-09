@@ -36,7 +36,11 @@ def get_grpc_client():
     """Get or create the gRPC client instance"""
     global grpc_client
     if grpc_client is None:
-        grpc_client = GameServiceClient()
+        try:
+            grpc_client = GameServiceClient()
+        except Exception as e:
+            logger.error("Failed to initialize gRPC client: {}".format(e))
+            raise
     return grpc_client
 
 
@@ -158,8 +162,16 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Add player to the session
     player_name = user.first_name or user.username or "Player_{}".format(user.id)
-    client = get_grpc_client()
-    player = client.add_player(session_to_join.game_session_id, player_name)
+    try:
+        client = get_grpc_client()
+        player = client.add_player(session_to_join.game_session_id, player_name)
+    except Exception as e:
+        logger.error("Error adding player: {}".format(e))
+        await update.message.reply_text(
+            "Sorry, I couldn't add you to the game. Please try again.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return
     
     if not player:
         await update.message.reply_text(
@@ -174,7 +186,15 @@ async def join_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     # Get all players in the session
-    players = client.get_players(session_to_join.game_session_id)
+    try:
+        players = client.get_players(session_to_join.game_session_id)
+    except Exception as e:
+        logger.error("Error getting players: {}".format(e))
+        await update.message.reply_text(
+            "Sorry, there was an error retrieving player information.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return
     
     # Notify all players in the session
     message = "🎉 {} has joined the game!\n\n".format(player_name)
@@ -252,8 +272,16 @@ async def handle_pack_selection(update: Update, context: ContextTypes.DEFAULT_TY
         return
     
     # Create a new game session
-    client = get_grpc_client()
-    game_session = client.create_game_session(selected_pack.id)
+    try:
+        client = get_grpc_client()
+        game_session = client.create_game_session(selected_pack.id)
+    except Exception as e:
+        logger.error("Error creating game session: {}".format(e))
+        await update.message.reply_text(
+            "Sorry, I couldn't create a new game session. Please try again.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return
     
     if not game_session:
         await update.message.reply_text(
@@ -269,7 +297,17 @@ async def handle_pack_selection(update: Update, context: ContextTypes.DEFAULT_TY
     
     # Add the creator as the first player
     player_name = user.first_name or user.username or "Player_{}".format(user.id)
-    player = client.add_player(game_session.id, player_name)
+    try:
+        player = client.add_player(game_session.id, player_name)
+    except Exception as e:
+        logger.error("Error adding player: {}".format(e))
+        await update.message.reply_text(
+            "Sorry, I couldn't add you to the game. Please try again.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        # Clean up the session state
+        game_state_manager.remove_session(game_session.id)
+        return
     
     if not player:
         await update.message.reply_text(
@@ -286,7 +324,17 @@ async def handle_pack_selection(update: Update, context: ContextTypes.DEFAULT_TY
     )
     
     # Get questions for this pack
-    questions = client.get_questions_by_pack_id(selected_pack.id)
+    try:
+        questions = client.get_questions_by_pack_id(selected_pack.id)
+    except Exception as e:
+        logger.error("Error getting questions: {}".format(e))
+        await update.message.reply_text(
+            "Sorry, I couldn't retrieve questions for this pack. Please try again.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        # Clean up
+        game_state_manager.remove_session(game_session.id)
+        return
     
     if not questions:
         await update.message.reply_text(
@@ -337,8 +385,16 @@ async def handle_waiting_room_action(update: Update, context: ContextTypes.DEFAU
             return
         
         # Start the game
-        client = get_grpc_client()
-        game_session = client.start_game_session(session_state.game_session_id)
+        try:
+            client = get_grpc_client()
+            game_session = client.start_game_session(session_state.game_session_id)
+        except Exception as e:
+            logger.error("Error starting game session: {}".format(e))
+            await update.message.reply_text(
+                "Sorry, I couldn't start the game. Please try again.",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return
         
         if not game_session:
             await update.message.reply_text(
@@ -392,8 +448,16 @@ async def present_question(update: Update, context: ContextTypes.DEFAULT_TYPE, g
         return
     
     # Get variants for this question
-    client = get_grpc_client()
-    variants = client.get_variants_by_question_id(question.id)
+    try:
+        client = get_grpc_client()
+        variants = client.get_variants_by_question_id(question.id)
+    except Exception as e:
+        logger.error("Error getting variants: {}".format(e))
+        await update.message.reply_text(
+            "Sorry, there was an error retrieving the question. Please try again.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return
     
     if not variants:
         # Skip this question if no variants
@@ -483,10 +547,18 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     # Submit answer to backend
-    client = get_grpc_client()
-    response = client.submit_answer(
-        player_state.player_id, question_id, selected_variant.id
-    )
+    try:
+        client = get_grpc_client()
+        response = client.submit_answer(
+            player_state.player_id, question_id, selected_variant.id
+        )
+    except Exception as e:
+        logger.error("Error submitting answer: {}".format(e))
+        await update.message.reply_text(
+            "Sorry, there was an error submitting your answer. Please try again.",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return
     
     if not response:
         await update.message.reply_text(
@@ -526,8 +598,12 @@ async def end_game(update: Update, context: ContextTypes.DEFAULT_TYPE, game_sess
         return
     
     # End game session in backend
-    client = get_grpc_client()
-    client.end_game_session(game_session_id)
+    try:
+        client = get_grpc_client()
+        client.end_game_session(game_session_id)
+    except Exception as e:
+        logger.error("Error ending game session: {}".format(e))
+        # Continue anyway, as we want to show results
     
     # Update game state
     game_state_manager.end_session(game_session_id)

@@ -34,6 +34,10 @@ class GameServiceClient:
             logger.error("Failed to import proto modules: {}".format(e))
             logger.error("Make sure you've run the proto generation script: ./generate_proto.sh")
             raise
+        except SyntaxError as e:
+            logger.error("Syntax error in generated proto files: {}".format(e))
+            logger.error("Try regenerating the proto files with: ./generate_proto.sh")
+            raise
         
         self.channel = grpc.insecure_channel(BACKEND_GRPC_ADDRESS)
         self.stub = self.cruds_pb2_grpc.QuizServiceStub(self.channel)
@@ -48,6 +52,9 @@ class GameServiceClient:
         except grpc.RpcError as e:
             logger.error("Failed to create game session: {}".format(e))
             return None
+        except Exception as e:
+            logger.error("Unexpected error creating game session: {}".format(e))
+            return None
 
     def get_game_session(self, game_session_id: str) -> Optional[object]:
         """Get game session by ID"""
@@ -57,6 +64,9 @@ class GameServiceClient:
             return response.game_session
         except grpc.RpcError as e:
             logger.error("Failed to get game session: {}".format(e))
+            return None
+        except Exception as e:
+            logger.error("Unexpected error getting game session: {}".format(e))
             return None
 
     def start_game_session(self, game_session_id: str) -> Optional[object]:
@@ -68,6 +78,9 @@ class GameServiceClient:
         except grpc.RpcError as e:
             logger.error("Failed to start game session: {}".format(e))
             return None
+        except Exception as e:
+            logger.error("Unexpected error starting game session: {}".format(e))
+            return None
 
     def end_game_session(self, game_session_id: str) -> Optional[object]:
         """End a game session"""
@@ -77,6 +90,9 @@ class GameServiceClient:
             return response.game_session
         except grpc.RpcError as e:
             logger.error("Failed to end game session: {}".format(e))
+            return None
+        except Exception as e:
+            logger.error("Unexpected error ending game session: {}".format(e))
             return None
 
     def get_all_packs(self) -> List[object]:
@@ -88,6 +104,9 @@ class GameServiceClient:
         except grpc.RpcError as e:
             logger.error("Failed to get packs: {}".format(e))
             return []
+        except Exception as e:
+            logger.error("Unexpected error getting packs: {}".format(e))
+            return []
 
     def get_questions_by_pack_id(self, pack_id: str) -> List[object]:
         """Get all questions for a pack"""
@@ -98,6 +117,9 @@ class GameServiceClient:
         except grpc.RpcError as e:
             logger.error("Failed to get questions: {}".format(e))
             return []
+        except Exception as e:
+            logger.error("Unexpected error getting questions: {}".format(e))
+            return []
 
     def get_variants_by_question_id(self, question_id: str) -> List[object]:
         """Get all variants for a question"""
@@ -107,6 +129,9 @@ class GameServiceClient:
             return list(response.variants)
         except grpc.RpcError as e:
             logger.error("Failed to get variants: {}".format(e))
+            return []
+        except Exception as e:
+            logger.error("Unexpected error getting variants: {}".format(e))
             return []
 
     def add_player(self, game_session_id: str, player_name: str) -> Optional[object]:
@@ -121,6 +146,9 @@ class GameServiceClient:
         except grpc.RpcError as e:
             logger.error("Failed to add player: {}".format(e))
             return None
+        except Exception as e:
+            logger.error("Unexpected error adding player: {}".format(e))
+            return None
 
     def get_players(self, game_session_id: str) -> List[object]:
         """Get all players in a game session"""
@@ -130,6 +158,9 @@ class GameServiceClient:
             return list(response.players)
         except grpc.RpcError as e:
             logger.error("Failed to get players: {}".format(e))
+            return []
+        except Exception as e:
+            logger.error("Unexpected error getting players: {}".format(e))
             return []
 
     def submit_answer(self, player_id: str, question_id: str, variant_id: str) -> Optional[object]:
@@ -145,6 +176,9 @@ class GameServiceClient:
         except grpc.RpcError as e:
             logger.error("Failed to submit answer: {}".format(e))
             return None
+        except Exception as e:
+            logger.error("Unexpected error submitting answer: {}".format(e))
+            return None
 
     def get_player_answers(self, player_id: str) -> List[object]:
         """Get all answers submitted by a player"""
@@ -154,6 +188,9 @@ class GameServiceClient:
             return list(response.answers)
         except grpc.RpcError as e:
             logger.error("Failed to get player answers: {}".format(e))
+            return []
+        except Exception as e:
+            logger.error("Unexpected error getting player answers: {}".format(e))
             return []
 
     def close(self):
