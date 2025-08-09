@@ -7,9 +7,9 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 
-# Try to import the generated proto classes
+# Try to import the generated proto classes through our wrapper
 try:
-    from proto.models import models_pb2
+    from game_bot.proto_wrapper import models_pb2
 except ImportError:
     # If proto files haven't been generated yet, create a mock class
     class MockModelsPb2:

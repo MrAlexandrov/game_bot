@@ -38,7 +38,7 @@ chmod +x generate_proto.sh
 
 This script will:
 - Generate Python code from the proto files directly into the `proto/` directory structure
-- Fix import paths in the generated files
+- Add UTF-8 encoding declarations to prevent syntax errors
 
 ## 3. Set Environment Variables
 
@@ -66,6 +66,7 @@ game_bot/
 │   ├── config.py       # Configuration settings
 │   ├── grpc_client.py  # gRPC client for backend service
 │   ├── game_state.py   # Game state management
+│   ├── proto_wrapper.py# Proto import wrapper
 │   └── bot.py          # Main bot logic
 ├── proto/              # Protocol buffer definitions and generated code
 │   ├── __init__.py
@@ -90,6 +91,16 @@ game_bot/
 ├── generate_proto.sh   # Script to generate gRPC code
 └── README.md           # This file
 ```
+
+## How It Works
+
+The bot now uses a wrapper approach to handle proto imports:
+
+1. **Proto Generation**: The `generate_proto.sh` script generates the proto files with minimal post-processing
+2. **Import Wrapper**: The `proto_wrapper.py` module handles all proto imports and provides a clean interface
+3. **Error Handling**: If proto files aren't generated, the bot will still start but with mock objects
+
+This approach eliminates the need for complex import path fixing and makes the system more robust.
 
 ## Troubleshooting
 
@@ -132,6 +143,7 @@ The bot logs information and errors to the console. For more detailed logging, y
 ### Code Structure
 
 - `config.py` - Contains all configuration variables
+- `proto_wrapper.py` - Handles proto imports with error handling
 - `grpc_client.py` - Handles all communication with the backend service
 - `game_state.py` - Manages in-memory game state
 - `bot.py` - Contains all Telegram bot logic and command handlers

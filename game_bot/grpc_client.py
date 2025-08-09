@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from typing import List, Optional
 
 from game_bot.config import BACKEND_GRPC_ADDRESS
+from game_bot.proto_wrapper import IMPORT_SUCCESS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,11 +22,13 @@ logger = logging.getLogger(__name__)
 
 class GameServiceClient:
     def __init__(self):
-        # Import the generated proto classes inside the constructor
+        # Import the generated proto classes through our wrapper
         # to avoid import errors if proto files haven't been generated yet
         try:
-            from proto.handlers import cruds_pb2, cruds_pb2_grpc
-            from proto.models import models_pb2, game_pb2
+            from game_bot.proto_wrapper import (
+                cruds_pb2, cruds_pb2_grpc,
+                models_pb2, game_pb2
+            )
             self.cruds_pb2 = cruds_pb2
             self.cruds_pb2_grpc = cruds_pb2_grpc
             self.models_pb2 = models_pb2
@@ -38,6 +41,9 @@ class GameServiceClient:
             logger.error("Syntax error in generated proto files: {}".format(e))
             logger.error("Try regenerating the proto files with: ./generate_proto.sh")
             raise
+        
+        if not IMPORT_SUCCESS:
+            logger.warning("Proto modules may not be available. Some features may not work.")
         
         self.channel = grpc.insecure_channel(BACKEND_GRPC_ADDRESS)
         self.stub = self.cruds_pb2_grpc.QuizServiceStub(self.channel)
