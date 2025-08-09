@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package NModels.Proto;
+option python_package = "game_bot.proto.models";
 
 message Pack {
     optional string id = 1;

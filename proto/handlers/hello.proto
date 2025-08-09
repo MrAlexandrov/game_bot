@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package handlers.api;
+option python_package = "game_bot.proto.handlers";
 
 service HelloService {
     rpc SayHello(HelloRequest) returns(HelloResponse) {}

@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package handlers.api;
+option python_package = "game_bot.proto.handlers";
 
 import "models/models.proto";
 import "models/game.proto";
