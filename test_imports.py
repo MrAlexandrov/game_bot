@@ -37,6 +37,10 @@ def test_imports():
         
     except ImportError as e:
         print("Import error: {}".format(e))
+        # Check if it's a proto-related import error
+        if "proto" in str(e):
+            print("This might be because the proto files haven't been generated yet.")
+            print("Run './generate_proto.sh' to generate the required proto files.")
         return False
     except Exception as e:
         print("Unexpected error: {}".format(e))

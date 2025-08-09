@@ -79,7 +79,24 @@ game_bot/
 │   ├── grpc_client.py  # gRPC client for backend service
 │   ├── game_state.py   # Game state management
 │   └── bot.py          # Main bot logic
-├── proto/              # Protocol buffer definitions
+├── proto/              # Protocol buffer definitions and generated code
+│   ├── __init__.py
+│   ├── handlers/       # Handler proto files and generated code
+│   │   ├── __init__.py
+│   │   ├── cruds.proto
+│   │   ├── cruds_pb2.py
+│   │   ├── cruds_pb2_grpc.py
+│   │   ├── hello.proto
+│   │   ├── hello_pb2.py
+│   │   └── hello_pb2_grpc.py
+│   └── models/         # Model proto files and generated code
+│       ├── __init__.py
+│       ├── game.proto
+│       ├── game_pb2.py
+│       ├── game_pb2_grpc.py
+│       ├── models.proto
+│       ├── models_pb2.py
+│       └── models_pb2_grpc.py
 ├── main.py             # Entry point
 ├── requirements.txt    # Python dependencies
 ├── generate_proto.sh   # Script to generate gRPC code
@@ -117,11 +134,15 @@ game_bot/
 
 ### Generated Files
 
-After running the proto generation script, you should have these files:
+After running the proto generation script, you should have these files in the `proto/` directory:
 - `proto/handlers/cruds_pb2.py`
 - `proto/handlers/cruds_pb2_grpc.py`
+- `proto/handlers/hello_pb2.py`
+- `proto/handlers/hello_pb2_grpc.py`
 - `proto/models/models_pb2.py`
+- `proto/models/models_pb2_grpc.py`
 - `proto/models/game_pb2.py`
+- `proto/models/game_pb2_grpc.py`
 
 ### Logs
 

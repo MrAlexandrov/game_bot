@@ -7,7 +7,15 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from game_bot.proto.models import models_pb2
+# Try to import the generated proto classes
+try:
+    from proto.models import models_pb2
+except ImportError:
+    # If proto files haven't been generated yet, create a mock class
+    class MockModelsPb2:
+        class Question:
+            pass
+    models_pb2 = MockModelsPb2()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
