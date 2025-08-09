@@ -1,3 +1,0 @@
-"""
-Handlers proto package
-"""

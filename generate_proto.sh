@@ -1,37 +1,50 @@
 #!/bin/bash
 
-# Remove any previously generated files
-rm -f proto/handlers/*_pb2.py proto/handlers/*_pb2_grpc.py
-rm -f proto/models/*_pb2.py proto/models/*_pb2_grpc.py
+# Путь к исходным proto-файлам в проекте бэкенд-сервиса
+PROTO_SRC_DIR="../game_userver/proto"
 
-echo "Generating Python gRPC code from proto files..."
+# Директория для сгенерированного Python-кода внутри проекта бота
+PROTO_GEN_DIR="./game_bot/proto"
 
-# Generate Python gRPC code from proto files
+# 1. Очищаем и создаем директорию для сгенерированных файлов
+echo "Cleaning up previous generated files..."
+rm -rf "${PROTO_GEN_DIR}"
+mkdir -p "${PROTO_GEN_DIR}"
+
+# 2. Находим все .proto файлы в исходной директории
+PROTO_FILES=$(find "${PROTO_SRC_DIR}" -name "*.proto")
+
+if [ -z "$PROTO_FILES" ]; then
+    echo "No .proto files found in ${PROTO_SRC_DIR}"
+    exit 1
+fi
+
+echo "Found proto files:"
+echo "$PROTO_FILES"
+echo ""
+
+# 3. Генерируем Python gRPC код
+# -I (include) указывает, где искать импортируемые .proto файлы.
+# --python_out и --grpc_python_out указывают, куда складывать сгенерированный код.
+# protoc сохранит структуру директорий относительно пути -I.
+echo "Generating Python gRPC code..."
 python3 -m grpc_tools.protoc \
-  -I./proto \
-  --python_out=. \
-  --grpc_python_out=. \
-  --proto_path=./proto \
-  ./proto/models/models.proto \
-  ./proto/models/game.proto \
-  ./proto/handlers/cruds.proto \
-  ./proto/handlers/hello.proto
+  -I"${PROTO_SRC_DIR}" \
+  --python_out="${PROTO_GEN_DIR}" \
+  --grpc_python_out="${PROTO_GEN_DIR}" \
+  $PROTO_FILES
 
-# Check if generation was successful
-if [ $? -eq 0 ]; then
-    echo "Proto generation successful!"
-    
-    # Add UTF-8 encoding declaration to all generated files
-    find proto -name "*_pb2.py" -exec sed -i '1i\# -*- coding: utf-8 -*-' {} \;
-    find proto -name "*_pb2_grpc.py" -exec sed -i '1i\# -*- coding: utf-8 -*-' {} \;
-    
-    # Show what files were generated
-    echo "Generated files:"
-    find proto -name "*_pb2*.py" | sort
-    
-    echo ""
-    echo "You can now run the bot with: python3 main.py"
-else
+# Проверяем успешность генерации
+if [ $? -ne 0 ]; then
     echo "Proto generation failed!"
     exit 1
 fi
+
+# 4. Создаем __init__.py файлы, чтобы сделать директории Python-пакетами
+echo "Creating __init__.py files..."
+find "${PROTO_GEN_DIR}" -type d -exec touch {}/__init__.py \;
+
+echo ""
+echo "Proto generation successful!"
+echo "Generated files are in ${PROTO_GEN_DIR}"
+echo "You can now import them in your bot, e.g.: from game_bot.proto.handlers import cruds_pb2"
