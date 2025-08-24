@@ -1,0 +1,7 @@
+# Game Configuration
+game:
+  points_per_correct_answer: 10
+
+# Backend Service Configuration
+backend:
+  grpc_address: "localhost:8081"

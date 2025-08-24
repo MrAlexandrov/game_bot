@@ -51,6 +51,22 @@ A Telegram bot for conducting quiz games using the game_userver backend service.
 python3 main.py
 ```
 
+## Running with Docker
+
+To run the bot using Docker:
+
+```bash
+./run.sh
+```
+
+Or directly with docker-compose:
+
+```bash
+docker-compose up
+```
+
+The Docker setup will automatically load environment variables from the `.env` file.
+
 ## Usage
 
 Once the bot is running, you can interact with it using these commands:

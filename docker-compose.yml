@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  # Telegram bot service
+  telegram_bot:
+    image: python:3.9
+    container_name: game_telegram_bot
+    environment:
+      - BACKEND_GRPC_ADDRESS=host.docker.internal:8081
+    env_file:
+      - .env
+    volumes:
+      - .:/app:rw
+    working_dir: /app
+    command: >
+      bash -c "
+        # Install dependencies
+        pip install -r requirements.txt
+        # Run the bot
+        python main.py
+      "
