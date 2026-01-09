@@ -1,173 +1,200 @@
-# Game Bot
+# Telegram Bot для игры в викторину
 
-A Telegram bot for conducting quiz games using the game_userver backend service.
+Этот Telegram бот позволяет играть в викторину через HTTP API вашего userver приложения.
 
-## Features
+## Возможности
 
-- Create and join quiz games
-- Multiple players can participate in the same game
-- Various quiz packs with questions and answers
-- Score tracking and game results
-- Real-time game management
+- 🎮 Создание игровых сессий
+- 👥 Поддержка нескольких игроков
+- ❓ Интерактивные вопросы с вариантами ответов
+- 🏆 Подсчет очков и отображение результатов
+- 📊 Выбор различных паков вопросов
 
-## Prerequisites
+## Установка
 
-- Python 3.7 or higher (the bot uses async/await syntax which requires Python 3.7+)
-- A Telegram bot token (from BotFather)
-- Access to the game_userver backend service
+### 1. Установите зависимости
 
-## Setup
-
-1. Clone the repository (if not already cloned)
-
-2. Install the required dependencies:
-   ```bash
-   # Make sure you're using Python 3
-   python3 --version
-   
-   # Install the required dependencies
-   pip3 install -r requirements.txt
-   ```
-
-3. Generate the gRPC client code from proto files:
-   ```bash
-   # Install gRPC tools
-   pip3 install grpcio-tools==1.50.0
-   
-   # Run the generation script
-   chmod +x generate_proto.sh
-   ./generate_proto.sh
-   ```
-
-4. Set up environment variables:
-   ```bash
-   export TELEGRAM_BOT_TOKEN="your_telegram_bot_token_here"
-   export BACKEND_GRPC_ADDRESS="localhost:8082"  # Adjust if your backend is on a different address
-   ```
-
-## Running the Bot
+#### Вариант A: Используя Poetry (рекомендуется)
 
 ```bash
-python3 main.py
+cd telegram_bot
+
+# Установите Poetry, если еще не установлен
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Установите зависимости
+poetry install
+
+# Активируйте виртуальное окружение
+poetry shell
 ```
 
-## Running with Docker
-
-To run the bot using Docker:
+#### Вариант B: Используя pip
 
 ```bash
-./run.sh
+cd telegram_bot
+pip install -r requirements.txt
 ```
 
-Or directly with docker-compose:
+### 2. Создайте бота в Telegram
+
+1. Найдите [@BotFather](https://t.me/botfather) в Telegram
+2. Отправьте команду `/newbot`
+3. Следуйте инструкциям для создания бота
+4. Сохраните полученный токен
+
+### 3. Настройте переменные окружения
+
+Создайте файл `.env` на основе `.env.example`:
 
 ```bash
-docker-compose up
+cp .env.example .env
 ```
 
-The Docker setup will automatically load environment variables from the `.env` file.
+Отредактируйте `.env` и укажите ваши данные:
 
-## Usage
-
-Once the bot is running, you can interact with it using these commands:
-
-- `/start` - Show help message
-- `/newgame` - Start a new quiz game
-- `/join` - Join an existing game
-- `/packs` - List available quiz packs
-- `/cancel` - Cancel current game
-
-## How to Play
-
-1. Start a new game with `/newgame` and select a quiz pack
-2. Other players can join with `/join` while the game is waiting for players
-3. The game creator starts the game when ready
-4. Answer questions as they appear
-5. See final scores when the game ends
-
-## Project Structure
-
-```
-game_bot/
-├── game_bot/           # Main bot package
-│   ├── __init__.py     # Package initializer
-│   ├── config.py       # Configuration settings
-│   ├── grpc_client.py  # gRPC client for backend service
-│   ├── game_state.py   # Game state management
-│   └── bot.py          # Main bot logic
-├── proto/              # Protocol buffer definitions and generated code
-│   ├── __init__.py
-│   ├── handlers/       # Handler proto files and generated code
-│   │   ├── __init__.py
-│   │   ├── cruds.proto
-│   │   ├── cruds_pb2.py
-│   │   ├── cruds_pb2_grpc.py
-│   │   ├── hello.proto
-│   │   ├── hello_pb2.py
-│   │   └── hello_pb2_grpc.py
-│   └── models/         # Model proto files and generated code
-│       ├── __init__.py
-│       ├── game.proto
-│       ├── game_pb2.py
-│       ├── game_pb2_grpc.py
-│       ├── models.proto
-│       ├── models_pb2.py
-│       └── models_pb2_grpc.py
-├── main.py             # Entry point
-├── requirements.txt    # Python dependencies
-├── generate_proto.sh   # Script to generate gRPC code
-└── README.md           # This file
+```bash
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+API_BASE_URL=http://localhost:8080
 ```
 
-## Development
+## Запуск
 
-### Adding New Features
+### Запуск бота
 
-1. Modify the proto files if you need to change the API
-2. Regenerate the gRPC code with `./generate_proto.sh`
-3. Update the `grpc_client.py` with new methods if needed
-4. Add new command handlers in `bot.py`
+#### С Poetry:
 
-### Code Structure
+```bash
+# Если вы в виртуальном окружении Poetry
+python bot.py
 
-- `config.py` - Contains all configuration variables
-- `grpc_client.py` - Handles all communication with the backend service
-- `game_state.py` - Manages in-memory game state
-- `bot.py` - Contains all Telegram bot logic and command handlers
+# Или напрямую через Poetry
+poetry run python bot.py
+
+# Или используя скрипт
+poetry run bot
+```
+
+#### С pip:
+
+```bash
+python3 bot.py
+```
+
+#### С переменными окружения напрямую:
+
+```bash
+export TELEGRAM_BOT_TOKEN="your_token"
+export API_BASE_URL="http://localhost:8080"
+python3 bot.py
+```
+
+## Использование
+
+### Команды бота
+
+- `/start` - Начать работу с ботом
+- `/newgame` - Создать новую игру
+- `/cancel` - Отменить текущую игру
+- `/help` - Показать справку
+
+### Процесс игры
+
+1. **Создание игры**: Отправьте `/newgame` и выберите пак вопросов
+2. **Ожидание игроков**: Другие игроки могут присоединиться (в текущей версии - один игрок)
+3. **Начало игры**: Нажмите кнопку "▶️ Начать игру"
+4. **Ответы на вопросы**: Выбирайте правильные варианты ответов
+5. **Результаты**: После последнего вопроса увидите таблицу результатов
+
+## API Endpoints
+
+Бот использует следующие endpoints вашего API:
+
+### Content Management
+- `GET /packs` - Получить все паки вопросов
+
+### Game API
+- `POST /games` - Создать игровую сессию
+- `POST /games/{game_id}/players` - Добавить игрока
+- `POST /games/{game_id}/start` - Начать игру
+- `GET /games/{game_id}/state` - Получить текущий вопрос
+- `POST /games/{game_id}/answers` - Отправить ответ
+- `GET /games/{game_id}/results` - Получить результаты
+
+## Исправленные проблемы
+
+В этой версии исправлены следующие проблемы по сравнению с оригинальной версией:
+
+1. ✅ **Правильные API endpoints** - обновлены все URL в соответствии с backend API
+2. ✅ **Корректная структура запросов** - исправлена передача параметров
+3. ✅ **Добавлен game_id в submit_answer** - теперь используется правильный endpoint `/games/{game_id}/answers`
+4. ✅ **Улучшена обработка результатов** - корректная проверка завершения игры
+5. ✅ **Исправлена обработка имен игроков** - поддержка полей `name` и `player_name`
+
+## Архитектура
+
+```
+┌─────────────┐
+│  Telegram   │
+│    User     │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Telegram   │
+│     Bot     │
+└──────┬──────┘
+       │ HTTP API
+       ▼
+┌─────────────┐
+│   userver   │
+│  Game API   │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│ PostgreSQL  │
+│  Database   │
+└─────────────┘
+```
 
 ## Troubleshooting
 
-### Common Issues
+### Бот не отвечает
+- Проверьте, что токен бота правильный
+- Убедитесь, что бот запущен
+- Проверьте логи на наличие ошибок
 
-1. **Python version issues**: Make sure you're using Python 3.7 or higher
-2. **Proto generation fails**: Make sure you have `grpcio-tools` installed before running the script
-3. **Import errors**: If you still get import errors after generating the proto code, try running:
-   ```bash
-   export PYTHONPATH=/path/to/game_bot:$PYTHONPATH
-   ```
-4. **Connection errors**: Verify the backend service is running and accessible
-5. **Authentication errors**: Check your Telegram bot token
+### Ошибка "Не удалось загрузить список паков"
+- Убедитесь, что API сервер запущен на `http://localhost:8080`
+- Проверьте URL в `API_BASE_URL`
+- Убедитесь, что в базе данных есть паки (используйте `create_test_data.py`)
 
-### Generated Files
+### Ошибка при создании игры
+- Проверьте, что в выбранном паке есть вопросы
+- Убедитесь, что у вопросов есть варианты ответов
+- Проверьте логи API сервера
 
-After running the proto generation script, you should have these files in the `proto/` directory:
-- `proto/handlers/cruds_pb2.py`
-- `proto/handlers/cruds_pb2_grpc.py`
-- `proto/handlers/hello_pb2.py`
-- `proto/handlers/hello_pb2_grpc.py`
-- `proto/models/models_pb2.py`
-- `proto/models/models_pb2_grpc.py`
-- `proto/models/game_pb2.py`
-- `proto/models/game_pb2_grpc.py`
+## Разработка
 
-### Logs
+### Добавление новых функций
 
-The bot logs information and errors to the console. For more detailed logging, you can modify the logging level in `bot.py` and `grpc_client.py`.
+Бот построен с использованием `python-telegram-bot` и `ConversationHandler`.
+Основные состояния:
 
-## Contributing
+- `SELECTING_PACK` - Выбор пака вопросов
+- `WAITING_FOR_PLAYERS` - Ожидание игроков
+- `PLAYING` - Процесс игры
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+### Расширение функционала
+
+Вы можете добавить:
+- Поддержку нескольких игроков в одном чате
+- Таймер для ответов
+- Систему рейтингов
+- Статистику игроков
+- Режим турнира
+
+## Лицензия
+
+Этот проект использует те же условия лицензии, что и основной проект game_userver.
