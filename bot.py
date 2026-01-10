@@ -12,6 +12,8 @@ from telegram.ext import (
     Application,
     CommandHandler,
     CallbackQueryHandler,
+    MessageHandler,
+    filters,
     ContextTypes,
     ConversationHandler,
 )
@@ -29,7 +31,7 @@ API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:8080')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
 # Состояния для ConversationHandler
-SELECTING_PACK, WAITING_FOR_PLAYERS, PLAYING = range(3)
+SELECTING_PACK, WAITING_FOR_PLAYERS, PLAYING, UPLOADING_PACK = range(4)
 
 # Хранилище активных игр (в продакшене использовать Redis или БД)
 active_games: Dict[int, dict] = {}
@@ -138,6 +140,22 @@ class GameAPI:
         except Exception as e:
             logger.error(f"Error getting game results: {e}")
             return None
+    
+    @staticmethod
+    def upload_pack_from_yaml(yaml_content: str):
+        """Загрузить пак из YAML"""
+        try:
+            response = requests.post(
+                f'{API_BASE_URL}/packs/yaml',
+                data=yaml_content,
+                headers={'Content-Type': 'text/plain'},
+                timeout=10
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error uploading pack from YAML: {e}")
+            return None
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -159,6 +177,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 /start - Начать работу с ботом
 /newgame - Создать новую игру
+/uploadpack - Загрузить новый пак вопросов из YAML файла
 /cancel - Отменить текущую игру
 /help - Показать эту справку
 
@@ -168,6 +187,11 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 3. Дождитесь других игроков или начните игру
 4. Отвечайте на вопросы, выбирая правильные варианты
 5. В конце игры увидите результаты!
+
+*Как загрузить пак:*
+1. Используйте команду /uploadpack
+2. Отправьте YAML файл с вопросами
+3. Пак будет добавлен в систему
 
 Удачи! 🍀
     """
@@ -477,6 +501,82 @@ async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     return ConversationHandler.END
 
 
+async def upload_pack_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Начать процесс загрузки пака"""
+    await update.message.reply_text(
+        "📤 *Загрузка пака вопросов*\n\n"
+        "Отправьте мне YAML файл с вопросами.\n\n"
+        "Формат файла:\n"
+        "```yaml\n"
+        "title: Название пака\n"
+        "questions:\n"
+        "  - text: Текст вопроса\n"
+        "    variants:\n"
+        "      - text: Вариант 1\n"
+        "      - text: Вариант 2\n"
+        "        is_correct: true\n"
+        "```\n\n"
+        "Используйте /cancel для отмены.",
+        parse_mode='Markdown'
+    )
+    return UPLOADING_PACK
+
+
+async def handle_pack_file(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Обработка загруженного файла пака"""
+    if not update.message.document:
+        await update.message.reply_text(
+            "❌ Пожалуйста, отправьте файл.\n"
+            "Используйте /cancel для отмены."
+        )
+        return UPLOADING_PACK
+    
+    document = update.message.document
+    
+    # Проверяем расширение файла
+    if not (document.file_name.endswith('.yaml') or document.file_name.endswith('.yml')):
+        await update.message.reply_text(
+            "❌ Пожалуйста, отправьте файл с расширением .yaml или .yml\n"
+            "Используйте /cancel для отмены."
+        )
+        return UPLOADING_PACK
+    
+    try:
+        # Скачиваем файл
+        file = await context.bot.get_file(document.file_id)
+        file_content = await file.download_as_bytearray()
+        yaml_content = file_content.decode('utf-8')
+        
+        await update.message.reply_text("⏳ Загружаю пак на сервер...")
+        
+        # Отправляем на сервер
+        result = GameAPI.upload_pack_from_yaml(yaml_content)
+        
+        if result and 'id' in result:
+            await update.message.reply_text(
+                f"✅ *Пак успешно загружен!*\n\n"
+                f"📦 Название: {result.get('title', 'Без названия')}\n"
+                f"🆔 ID: `{result['id']}`\n\n"
+                f"Теперь вы можете использовать этот пак в игре!",
+                parse_mode='Markdown'
+            )
+        else:
+            error_msg = result.get('error', 'Неизвестная ошибка') if result else 'Не удалось загрузить пак'
+            await update.message.reply_text(
+                f"❌ Ошибка при загрузке пака:\n{error_msg}\n\n"
+                "Проверьте формат файла и попробуйте снова."
+            )
+        
+    except Exception as e:
+        logger.error(f"Error processing pack file: {e}")
+        await update.message.reply_text(
+            f"❌ Ошибка при обработке файла: {str(e)}\n\n"
+            "Проверьте формат файла и попробуйте снова."
+        )
+    
+    return ConversationHandler.END
+
+
 def main():
     """Запуск бота"""
     if not TELEGRAM_TOKEN:
@@ -504,10 +604,22 @@ def main():
         fallbacks=[CommandHandler('cancel', cancel)],
     )
     
+    # ConversationHandler для загрузки паков
+    upload_conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('uploadpack', upload_pack_command)],
+        states={
+            UPLOADING_PACK: [
+                MessageHandler(filters.Document.ALL, handle_pack_file)
+            ],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+    
     # Регистрируем обработчики
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help_command))
     application.add_handler(conv_handler)
+    application.add_handler(upload_conv_handler)
     
     # Запускаем бота
     logger.info("Starting bot...")
