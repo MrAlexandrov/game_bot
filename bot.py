@@ -147,8 +147,8 @@ class GameAPI:
         try:
             response = requests.post(
                 f'{API_BASE_URL}/packs/yaml',
-                data=yaml_content,
-                headers={'Content-Type': 'text/plain'},
+                data=yaml_content.encode('utf-8'),
+                headers={'Content-Type': 'text/plain; charset=utf-8'},
                 timeout=10
             )
             response.raise_for_status()
