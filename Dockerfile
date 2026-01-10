@@ -1,15 +1,21 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+# Install Poetry
+RUN pip install --no-cache-dir poetry==1.7.1
+
+# Copy poetry files first for better caching
+COPY pyproject.toml poetry.lock* ./
+
+# Configure Poetry to not create virtual environment in Docker
+RUN poetry config virtualenvs.create false
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN poetry install --no-dev --no-interaction --no-ansi
 
 # Copy the rest of the application
 COPY . .
 
 # Run the bot
-CMD ["python", "bot.py"]
+CMD ["poetry", "run", "python", "bot.py"]

@@ -73,23 +73,35 @@ docker-compose down
 
 If you prefer to run the bot manually:
 
-### 1. Install dependencies
+### 1. Install Poetry
+
+```bash
+# Install Poetry if not already installed
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+### 2. Install dependencies
 
 ```bash
 cd /Users/mrralexandrov/projects/game/frontend/telegram_bot
-pip install -r requirements.txt
+poetry install
 ```
 
-### 2. Set environment variables
+### 3. Set environment variables
 
 ```bash
 export TELEGRAM_BOT_TOKEN="your_bot_token_here"
 export API_BASE_URL="http://localhost:8080"
 ```
 
-### 3. Run the bot
+### 4. Run the bot
 
 ```bash
+# Using Poetry
+poetry run python bot.py
+
+# Or activate the virtual environment first
+poetry shell
 python bot.py
 ```
 
@@ -197,7 +209,7 @@ The database needs to be populated with quiz data. Check the backend documentati
 
 2. Reinstall dependencies:
    ```bash
-   pip install -r requirements.txt --force-reinstall
+   poetry install --no-cache
    ```
 
 ## Development
@@ -207,20 +219,22 @@ The database needs to be populated with quiz data. Check the backend documentati
 ```
 frontend/telegram_bot/
 ├── bot.py              # Main bot logic
-├── requirements.txt    # Python dependencies
+├── pyproject.toml     # Poetry configuration and dependencies
 ├── Dockerfile         # Docker configuration
 ├── .env.example       # Environment template
 ├── README.md          # Original documentation
 ├── SETUP.md           # This file
 ├── CHANGELOG.md       # Version history
-├── QUICKSTART.md      # Quick reference
-└── pyproject.toml     # Poetry configuration
+└── QUICKSTART.md      # Quick reference
 ```
 
 ### Making Changes
 
 1. Edit [`bot.py`](./bot.py) for bot logic changes
-2. Update [`requirements.txt`](./requirements.txt) if adding dependencies
+2. Update [`pyproject.toml`](./pyproject.toml) if adding dependencies:
+   ```bash
+   poetry add package-name
+   ```
 3. Rebuild the Docker image:
    ```bash
    docker-compose build telegram_bot
@@ -234,8 +248,8 @@ frontend/telegram_bot/
 export TELEGRAM_BOT_TOKEN="your_token"
 export API_BASE_URL="http://localhost:8080"
 
-# Run the bot
-python bot.py
+# Run the bot with Poetry
+poetry run python bot.py
 ```
 
 ## Migration Notes

@@ -14,8 +14,6 @@
 
 ### 1. Установите зависимости
 
-#### Вариант A: Используя Poetry (рекомендуется)
-
 ```bash
 cd telegram_bot
 
@@ -27,13 +25,6 @@ poetry install
 
 # Активируйте виртуальное окружение
 poetry shell
-```
-
-#### Вариант B: Используя pip
-
-```bash
-cd telegram_bot
-pip install -r requirements.txt
 ```
 
 ### 2. Создайте бота в Telegram
@@ -62,8 +53,6 @@ API_BASE_URL=http://localhost:8080
 
 ### Запуск бота
 
-#### С Poetry:
-
 ```bash
 # Если вы в виртуальном окружении Poetry
 python bot.py
@@ -75,18 +64,12 @@ poetry run python bot.py
 poetry run bot
 ```
 
-#### С pip:
-
-```bash
-python3 bot.py
-```
-
-#### С переменными окружения напрямую:
+### С переменными окружения напрямую:
 
 ```bash
 export TELEGRAM_BOT_TOKEN="your_token"
 export API_BASE_URL="http://localhost:8080"
-python3 bot.py
+poetry run python bot.py
 ```
 
 ## Использование
