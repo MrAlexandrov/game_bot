@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "Telegram bot for quiz game powered by userver backend"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-packages = [{include = "bot.py"}]
+packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -22,4 +22,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-bot = "bot:main"
+bot = "src.bot:main"

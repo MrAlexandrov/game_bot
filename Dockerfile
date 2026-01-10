@@ -18,4 +18,4 @@ RUN poetry install --no-dev --no-interaction --no-ansi
 COPY . .
 
 # Run the bot
-CMD ["poetry", "run", "python", "bot.py"]
+CMD ["poetry", "run", "python", "-m", "src.bot"]

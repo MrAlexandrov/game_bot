@@ -1,0 +1,1 @@
+"""Game Quiz Telegram Bot package"""
