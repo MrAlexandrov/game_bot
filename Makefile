@@ -2,9 +2,13 @@
 install:
 	poetry install
 
+.PHONY: install-dev
+install-dev:
+	poetry install --with dev
+
 .PHONY: run
 run:
-	poetry run python -m src.bot
+	poetry run python -m src.main
 
 .PHONY: lint
 lint:
