@@ -62,9 +62,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 *Как играть:*
 1. Создайте новую игру командой /newgame
 2. Выберите пак вопросов
-3. Дождитесь других игроков или начните игру
-4. Отвечайте на вопросы, выбирая правильные варианты
-5. В конце игры увидите результаты!
+3. Другие игроки нажимают «Присоединиться»
+4. Когда все готовы — нажмите «Начать игру»
+5. Отвечайте на вопросы, выбирая правильные варианты
+6. В конце игры увидите результаты!
 
 *Как загрузить пак:*
 1. Используйте команду /uploadpack
@@ -78,8 +79,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def new_game(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Создать новую игру"""
-    # chat_id = update.effective_chat.id
-
     # Получаем доступные паки
     packs = GameAPI.get_all_packs()
 
@@ -124,9 +123,8 @@ async def pack_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         return ConversationHandler.END
 
     # Добавляем создателя как первого игрока
-    player = GameAPI.add_player(
-        game_session["id"], user.first_name or f"Player_{user.id}"
-    )
+    creator_name = user.first_name or f"Player_{user.id}"
+    player = GameAPI.add_player(game_session["id"], creator_name)
 
     if not player:
         await query.edit_message_text("❌ Не удалось добавить игрока. Попробуйте позже.")
@@ -136,10 +134,12 @@ async def pack_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     active_games[chat_id] = {
         "game_session_id": game_session["id"],
         "players": {user.id: player["id"]},
+        "player_names": [creator_name],
         "current_question": None,
     }
 
     keyboard = [
+        [InlineKeyboardButton("🎮 Присоединиться", callback_data="join_game")],
         [InlineKeyboardButton("▶️ Начать игру", callback_data="start_game")],
         [InlineKeyboardButton("❌ Отменить", callback_data="cancel_game")],
     ]
@@ -147,9 +147,60 @@ async def pack_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     await query.edit_message_text(
         f"✅ Игра создана!\n\n"
-        f"Игрок: {user.first_name}\n\n"
-        f"Другие игроки могут присоединиться, написав /join\n"
-        f"Когда все будут готовы, нажмите 'Начать игру'",
+        f"👥 Игроки ({len(active_games[chat_id]['player_names'])}):\n"
+        f"• {creator_name}\n\n"
+        f"Другие игроки могут нажать «Присоединиться».\n"
+        f"Когда все будут готовы, нажмите «Начать игру».",
+        reply_markup=reply_markup,
+    )
+
+    return WAITING_FOR_PLAYERS
+
+
+async def join_game_callback(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Присоединиться к игре"""
+    query = update.callback_query
+
+    chat_id = update.effective_chat.id
+    user = update.effective_user
+
+    if chat_id not in active_games:
+        await query.answer("❌ Игра не найдена!", show_alert=True)
+        return WAITING_FOR_PLAYERS
+
+    game_info = active_games[chat_id]
+
+    if user.id in game_info["players"]:
+        await query.answer("Вы уже в игре!", show_alert=True)
+        return WAITING_FOR_PLAYERS
+
+    player_name = user.first_name or f"Player_{user.id}"
+    player = GameAPI.add_player(game_info["game_session_id"], player_name)
+
+    if not player:
+        await query.answer("❌ Не удалось присоединиться к игре!", show_alert=True)
+        return WAITING_FOR_PLAYERS
+
+    await query.answer()
+
+    game_info["players"][user.id] = player["id"]
+    game_info["player_names"].append(player_name)
+
+    players_text = "\n".join(f"• {name}" for name in game_info["player_names"])
+    keyboard = [
+        [InlineKeyboardButton("🎮 Присоединиться", callback_data="join_game")],
+        [InlineKeyboardButton("▶️ Начать игру", callback_data="start_game")],
+        [InlineKeyboardButton("❌ Отменить", callback_data="cancel_game")],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await query.edit_message_text(
+        f"✅ {player_name} присоединился к игре!\n\n"
+        f"👥 Игроки ({len(game_info['player_names'])}):\n"
+        f"{players_text}\n\n"
+        f"Когда все будут готовы, нажмите «Начать игру».",
         reply_markup=reply_markup,
     )
 
@@ -224,20 +275,15 @@ async def show_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     question_text = f"❓ *Вопрос:*\n\n{question['text']}"
 
-    if "image_url" in question and question["image_url"]:
+    if question.get("image_url"):
         question_text += f"\n\n🖼 Изображение: {question['image_url']}"
 
-    if update.callback_query:
-        await update.callback_query.message.reply_text(
-            question_text, reply_markup=reply_markup, parse_mode="Markdown"
-        )
-    else:
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=question_text,
-            reply_markup=reply_markup,
-            parse_mode="Markdown",
-        )
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text=question_text,
+        reply_markup=reply_markup,
+        parse_mode="Markdown",
+    )
 
 
 async def answer_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -269,27 +315,46 @@ async def answer_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await query.answer("❌ Ошибка при отправке ответа!", show_alert=True)
         return PLAYING
 
-    # Проверяем результат
-    is_correct = result.get("result") == "correct"
-    game_finished = (
-        result.get("game_finished", False) or result.get("result") == "game_finished"
-    )
+    result_text = result.get("result")
+    is_correct = result_text == "correct"
+    game_finished = result_text == "game_finished" or result.get("game_finished", False)
 
-    # Показываем результат ответа
     if game_finished:
-        await query.edit_message_text(
-            f"{'✅ Правильно!' if is_correct else '❌ Неправильно!'}\n\n"
-            f"🏁 Игра завершена! Показываю результаты..."
-        )
+        await query.edit_message_text("🏁 Игра завершена! Показываю результаты...")
         await show_results(update, context)
         return ConversationHandler.END
-    else:
-        await query.edit_message_text(
-            f"{'✅ Правильно!' if is_correct else '❌ Неправильно!'}\n\n"
-            f"Загружаю следующий вопрос..."
-        )
+
+    # Показываем результат ответа этому игроку
+    await query.edit_message_text(
+        "✅ Правильно!" if is_correct else "❌ Неправильно!"
+    )
+
+    # Проверяем, сдвинулся ли вопрос (все игроки ответили?)
+    question_data = GameAPI.get_current_question(game_session_id)
+
+    if not question_data or "error" in question_data:
+        # Игра завершилась (race condition или последний ответ)
+        await show_results(update, context)
+        return ConversationHandler.END
+
+    prev_question_id = (
+        game_info["current_question"]["id"]
+        if game_info.get("current_question")
+        else None
+    )
+    new_question_id = question_data["question"]["id"]
+
+    if prev_question_id != new_question_id:
+        # Вопрос сменился — все ответили, показываем следующий
         await show_question(update, context)
-        return PLAYING
+    else:
+        # Вопрос ещё тот же — ждём остальных игроков
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="⏳ Ваш ответ принят! Ожидаем ответы других игроков...",
+        )
+
+    return PLAYING
 
 
 async def show_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -316,19 +381,16 @@ async def show_results(update: Update, context: ContextTypes.DEFAULT_TYPE):
         medals = ["🥇", "🥈", "🥉"]
         for i, player in enumerate(players):
             medal = medals[i] if i < len(medals) else "👤"
-            player_name = player.get("name", player.get("player_name", "Unknown"))
+            player_name = player.get("name", "Unknown")
             player_score = player.get("score", 0)
             message += f"{medal} {player_name}: {player_score} очков\n"
 
         message += "\n\nСпасибо за игру! 🎉\n"
         message += "Используйте /newgame чтобы сыграть еще раз!"
 
-    if update.callback_query:
-        await update.callback_query.message.reply_text(message, parse_mode="Markdown")
-    else:
-        await context.bot.send_message(
-            chat_id=chat_id, text=message, parse_mode="Markdown"
-        )
+    await context.bot.send_message(
+        chat_id=chat_id, text=message, parse_mode="Markdown"
+    )
 
     # Удаляем игру из активных
     if chat_id in active_games:
@@ -458,18 +520,22 @@ def run_bot():
     # Создаем приложение
     application = Application.builder().token(TELEGRAM_TOKEN).build()
 
-    # Создаем ConversationHandler для игры
+    # Создаем ConversationHandler для игры.
+    # per_user=False: состояние отслеживается per-chat, а не per-user,
+    # чтобы все пользователи чата могли участвовать в одной игре.
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("newgame", new_game)],
         states={
             SELECTING_PACK: [CallbackQueryHandler(pack_selected, pattern="^pack_")],
             WAITING_FOR_PLAYERS: [
+                CallbackQueryHandler(join_game_callback, pattern="^join_game$"),
                 CallbackQueryHandler(start_game_callback, pattern="^start_game$"),
                 CallbackQueryHandler(cancel_callback, pattern="^cancel_game$"),
             ],
             PLAYING: [CallbackQueryHandler(answer_callback, pattern="^answer_")],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
+        per_user=False,
     )
 
     # ConversationHandler для загрузки паков
